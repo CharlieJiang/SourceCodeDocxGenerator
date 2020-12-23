@@ -48,14 +48,14 @@ public class CodeDocxGenerator {
         print("软件名称：" + args[1]);
         print("版本号：" + args[2]);
         print("源代码文件类型：" + FILE_TYPE);
-        generateSourceCodeWord(PROJECT_PATH);
+        generateSourceCodeDocx(PROJECT_PATH);
     }
 
     /**
      * 生成源代码Word文档
      * @param projectPath 源代码目录
      */
-    private static void generateSourceCodeWord(String projectPath){
+    private static void generateSourceCodeDocx(String projectPath){
         //扫描项目中符合要求的文件
         print("开始扫描文件");
         List<String> files = scanFiles(projectPath);
@@ -70,14 +70,14 @@ public class CodeDocxGenerator {
         files.forEach(f ->
                 {
                     if(totalLines < MAX_LINES){// 行数达到要求则不再写入
-                        writeFileToWord(f,doc);
+                        writeFileToDocx(f,doc);
                     }
                 }
         );
         print("写入Word文档完成");
         print("Word文档输出目录：" + DOC_SAVE_PATH);
         // 保存Word文档
-        saveWord(doc,DOC_SAVE_PATH);
+        saveDocx(doc,DOC_SAVE_PATH);
         print("统计代码行数：" + totalLines);
         // Word添加页眉：显示软件名称、版本号和页码
         createPageHeader(HEADER);
@@ -228,8 +228,8 @@ public class CodeDocxGenerator {
      * 单个源码文件写入Word
      * @param filePath 源码文件路径
      */
-    private static void writeFileToWord(String filePath, XWPFDocument doc){
-        print(getFileName(filePath));
+    private static void writeFileToDocx(String filePath, XWPFDocument doc){
+        print(filePath);
         // 写入文件标题
         XWPFParagraph titleP = doc.createParagraph();// 新建文件标题段落
         XWPFRun titleRun = titleP.createRun();// 创建段落文本
@@ -319,7 +319,7 @@ public class CodeDocxGenerator {
      * Word保存到本地
      * @param doc
      */
-    public static void saveWord(XWPFDocument doc, String savePath){
+    public static void saveDocx(XWPFDocument doc, String savePath){
         // 创建文件输出流：保存Word到本地
         try {
             FileOutputStream fout = new FileOutputStream(savePath);
