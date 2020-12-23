@@ -2,9 +2,13 @@
  SourceCodeDocxGenerator是一个自动生成软著申请所需的项目源代码Word文档的工具，使用它可以很方便地生成60页的源代码文档，而不用手动撸。  
  SourceCodeDocxGenerator基于Apache POI实现，详情请参考代码。 
  
+## 生成的源代码Word文档示例  
+![源代码Word文档截图示例](screenshot/docx.png)
+ 
 ## 注意
 1. 此工具目前只支持生成一种文件类型的源代码文档，如.java，如果要过滤多种文件类型，可以考虑修改此项目源码。
 2. 此项目是为了Android软件申请软著开发，所以在目录过滤时未考虑Java项目以及其他语言项目，可能会存在将项目自动生成的代码写进文档中的情况，后续会进行改进。
+3. 为了保证源代码的完整性，最后一个准备写入Word的源代码文件的内容会被全部写入Word中，由此也会导致最终生成的源代码Word文档的页数可能会超过60页，这时就需要手动调整文档页数。
 
 ## 使用SourceCodeDocxGenerator.jar
  本项目已打包成可运行的jar文件，即项目中的SourceCodeDocxGenerator.jar，可以直接在命令行中使用，使用命令格式如下：
