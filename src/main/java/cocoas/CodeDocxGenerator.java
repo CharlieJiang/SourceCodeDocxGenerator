@@ -8,9 +8,7 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * 描述：使用Apache poi自动生成软著申请所需的项目源代码Word文档
@@ -19,35 +17,49 @@ import java.util.List;
  */
 public class CodeDocxGenerator {
 
-//    private static final String PROJECT_PATH = "D:\\git_workspace\\MerchantClient\\app";// 项目路径
-    private static String PROJECT_PATH = "";// 项目路径
-//    private static final String DOC_SAVE_PATH = PROJECT_PATH + "\\SourceCode.docx";// 生成的源代码Word文档的保存路径
-    private static String DOC_SAVE_PATH ="";// 生成的源代码Word文档的保存路径
-//    private static final String HEADER = "济享如意商户通V1.0.7";// 软件名称+版本号
-    private static String HEADER = "";// 软件名称+版本号
-//    private static final String FILE_TYPE = ".java";// 需要查找的文件类型
-    private static String FILE_TYPE = "";// 需要查找的文件类型
-    private static int totalLines = 0;// 代码总行数
-    private static final int MAX_LINES = 52 * 60; // 限制代码的最大行数
-    private static final long PAGE_MARGIN_VERTICAL = 1080L;// 页面上下边距
-    private static final long PAGE_MARGIN_HORIZONTAL = 720L;// 页面左右边距
+    private String PROJECT_PATH = "";// 项目路径
+    private String DOC_SAVE_PATH ="";// 生成的源代码Word文档的保存路径
+    private String HEADER = "";// 软件名称+版本号
+    private List<String> FILE_TYPES;// 需要查找的文件类型
+    private int totalLines = 0;// 代码总行数
+    private final int MAX_LINES = 52 * 60; // 限制代码的最大行数
+    private final long PAGE_MARGIN_VERTICAL = 1080L;// 页面上下边距
+    private final long PAGE_MARGIN_HORIZONTAL = 720L;// 页面左右边距
+    private boolean IS_HALF = false;// 文档是否分为前后各30页
 
     public static void main(String[] args) {
-        print("开始");
+        CodeDocxGenerator cdg = new CodeDocxGenerator();
+        cdg.start(args);
+    }
+
+    /**
+     * 开始
+     * @param args
+     */
+    public void start(String[] args){
+        LogUtils.println("开始");
         // 四个参数处理：项目源代码目录、软件名称、版本号、源码文件类型
-        if(args == null || args.length < 4){
-            print("参数错误，请输入参数：源代码项目目录、软件名称、版本号、源代码文件类型。参数间以空格区分，文件类型以.开始。");
+        if(args == null || args.length < 5){
+            LogUtils.println("参数错误，请输入参数：源代码项目目录、软件名称、版本号、是否分为前后各30页（true/false）、源代码文件类型（以.开始，支持多个，以空格区分）。参数间以空格区分。");
             System.exit(0);
         }
         PROJECT_PATH = args[0];
         HEADER = args[1] + args[2];
-        FILE_TYPE = args[3];
+        IS_HALF = Boolean.parseBoolean(args[3]);
+        FILE_TYPES = new ArrayList<>();
+        // 遍历获取选择的源码文件类型
+        for(int i = 4;i < args.length;i++){
+            FILE_TYPES.add(args[i]);
+        }
         DOC_SAVE_PATH = PROJECT_PATH + "\\SourceCode.docx";
-        print("获取参数成功");
-        print("源代码项目目录：" + PROJECT_PATH);
-        print("软件名称：" + args[1]);
-        print("版本号：" + args[2]);
-        print("源代码文件类型：" + FILE_TYPE);
+        LogUtils.println("获取参数成功");
+        LogUtils.println("源代码项目目录：" + PROJECT_PATH);
+        LogUtils.println("软件名称：" + args[1]);
+        LogUtils.println("版本号：" + args[2]);
+        LogUtils.print("源代码文件类型：" );
+        FILE_TYPES.stream().forEach(LogUtils::print);
+        LogUtils.println("");
+        LogUtils.println("写入方式：" + (IS_HALF?"前后各30页":"顺序60页"));
         generateSourceCodeDocx(PROJECT_PATH);
     }
 
@@ -55,40 +67,60 @@ public class CodeDocxGenerator {
      * 生成源代码Word文档
      * @param projectPath 源代码目录
      */
-    private static void generateSourceCodeDocx(String projectPath){
+    private void generateSourceCodeDocx(String projectPath){
         //扫描项目中符合要求的文件
-        print("开始扫描文件");
-        List<String> files = scanFiles(projectPath);
-        print("扫描文件完成");
-        print("文件总数：" + files.size());
+        LogUtils.println("开始扫描文件");
+        List<String> files = FileUtils.scanFiles(projectPath, FILE_TYPES);
+        LogUtils.println("扫描文件完成");
+        LogUtils.println("文件总数：" + files.size());
         // 创建一个Word：存放源代码
         XWPFDocument doc = new XWPFDocument();
         // 设置Word的页边距：保证每页不少于50行代码，且尽量保证每行代码不换行
         setPageMargin(doc,PAGE_MARGIN_VERTICAL,PAGE_MARGIN_HORIZONTAL);
         // 迭代代码文件将源代码写入Word中
-        print("开始写入Word文档");
-        files.forEach(f ->
-                {
-                    if(totalLines < MAX_LINES){// 行数达到要求则不再写入
-                        writeFileToDocx(f,doc);
+        LogUtils.println("开始写入Word文档");
+        if(IS_HALF){// 按前后各30页写入源码文档中
+            // 先读取前30页
+            files.forEach(f ->
+                    {
+                        if(totalLines < MAX_LINES/2){// 行数达到要求则不再写入
+                            writeFileToDocx(f,doc);
+                        }
                     }
-                }
-        );
-        print("写入Word文档完成");
-        print("Word文档输出目录：" + DOC_SAVE_PATH);
+            );
+            //反转文件列表后继续读取后30页
+            Collections.reverse(files);
+            files.forEach(f ->
+                    {
+                        if(totalLines < MAX_LINES){// 行数达到要求则不再写入
+                            writeFileToDocx(f,doc);
+                        }
+                    }
+            );
+        }else{ // 从开始写入60页
+            files.forEach(f ->
+                    {
+                        if(totalLines < MAX_LINES){// 行数达到要求则不再写入
+                            writeFileToDocx(f,doc);
+                        }
+                    }
+            );
+        }
+        LogUtils.println("写入Word文档完成");
+        LogUtils.println("Word文档输出目录：" + DOC_SAVE_PATH);
         // 保存Word文档
         saveDocx(doc,DOC_SAVE_PATH);
-        print("统计代码行数：" + totalLines);
+        LogUtils.println("统计代码行数：" + totalLines);
         // Word添加页眉：显示软件名称、版本号和页码
         createPageHeader(HEADER);
-        print("结束");
+        LogUtils.println("结束");
     }
 
     /**
      * 创建页码：通过在页眉中插入Word中代表页码的域代码{PAGE  \* MERGEFORMAT}来显示页码
      * @param paragraph 段落
      */
-    private static void createPageNum(XWPFParagraph paragraph){
+    private void createPageNum(XWPFParagraph paragraph){
         // Word中域代码的语法是 {域名称 指令 可选开关} ，其中大括号不能直接写，只能通过代码来生成或表示
         // 下面三个步骤就是创建左大括号{、域代码内容、右大括号}
         // 创建左大括号{
@@ -111,7 +143,7 @@ public class CodeDocxGenerator {
      * Word添加页眉
      * @param header 页眉内容
      */
-    private static void createPageHeader(String header){
+    private void createPageHeader(String header){
         try {
             // 以已存在的Word文件创建文档对象
             XWPFDocument doc = new XWPFDocument(new FileInputStream(new File(DOC_SAVE_PATH)));
@@ -136,7 +168,7 @@ public class CodeDocxGenerator {
             doc.write(new FileOutputStream(DOC_SAVE_PATH));
             doc.close();
         }catch (Exception e){
-            error("Word添加页眉出错：" + e.getMessage());
+            LogUtils.error("Word添加页眉出错：" + e.getMessage());
         }
     }
 
@@ -147,7 +179,7 @@ public class CodeDocxGenerator {
      * @param type 页眉类型：决定创建的是奇数页页眉还是偶数页页眉
      * @param header 页眉显示的文本内容
      */
-    private static void createPageHeader(XWPFDocument doc, HeaderFooterType type, String header){
+    private void createPageHeader(XWPFDocument doc, HeaderFooterType type, String header){
         // 创建页眉段落
         XWPFParagraph  paragraph = doc.createHeader(type).createParagraph();
         paragraph.setAlignment(ParagraphAlignment.LEFT);// 页眉内容左对齐
@@ -173,7 +205,7 @@ public class CodeDocxGenerator {
      * @param marginVertical 上下边距
      * @param marginHorizontal 左右边距
      */
-    private static void setPageMargin(XWPFDocument doc,long marginVertical,long marginHorizontal){
+    private void setPageMargin(XWPFDocument doc,long marginVertical,long marginHorizontal){
         CTSectPr sectPr = doc.getDocument().getBody().addNewSectPr();
         CTPageMar pageMar = sectPr.addNewPgMar();
         pageMar.setTop(BigInteger.valueOf(marginVertical));
@@ -183,57 +215,15 @@ public class CodeDocxGenerator {
     }
 
     /**
-     * 扫描项目中符合要求文件，并将文件路径存放到列表中
-     * @param dir
-     * @return
-     */
-    private static List<String> scanFiles(String dir){
-        File rootFile = new File(dir);
-        if(!rootFile.isDirectory()){
-            print("项目路径错误：" + dir);
-            exit();
-        }
-        return collectFilesFromDir(dir);
-    }
-
-    /**
-     * 将文件目录中符合要求的文件的文件路径添加到List中
-     * @param dir
-     * @return
-     */
-    private static List<String> collectFilesFromDir(String dir){
-        File dirFile = new File(dir);
-        if(!dirFile.isDirectory()){
-            return new ArrayList<>();
-        }
-        List<String> files = new ArrayList<>();
-        File[] subFiles = dirFile.listFiles();
-        Arrays.stream(subFiles)
-                .forEach(
-                        f -> {
-                            // 特殊目录过滤
-                            if(f.isDirectory() && !f.getName().equals("build") && !f.getName().equals("zxing")){
-                                // 继续迭代目录
-                                files.addAll(collectFilesFromDir(f.getAbsolutePath()));
-                            }else if(f.getAbsolutePath().endsWith(FILE_TYPE)){
-                                // 添加文件路径
-                                files.add(f.getAbsolutePath());
-                            }
-                        }
-                );
-        return files;
-    }
-
-    /**
      * 单个源码文件写入Word
      * @param filePath 源码文件路径
      */
-    private static void writeFileToDocx(String filePath, XWPFDocument doc){
-        print(filePath);
+    private void writeFileToDocx(String filePath, XWPFDocument doc){
+        LogUtils.println(filePath);
         // 写入文件标题
         XWPFParagraph titleP = doc.createParagraph();// 新建文件标题段落
         XWPFRun titleRun = titleP.createRun();// 创建段落文本
-        titleRun.setText(getFileName(filePath));
+        titleRun.setText(FileUtils.getFileName(filePath));
         totalLines++;// 文件名行计数
 
         // 写入文件内容
@@ -243,7 +233,7 @@ public class CodeDocxGenerator {
         paragraph.setSpacingLineRule(LineSpacingRule.EXACT);
 
         XWPFRun run ;
-        List<String> lines = readFile(filePath);
+        List<String> lines = FileUtils.readFile(filePath);
         for(int i = 0;i < lines.size();i++){// 将代码一行行写入Word中
             run = paragraph.createRun();// 创建段落文本
             run.setText(lines.get(i));// 设置段落文本
@@ -258,96 +248,20 @@ public class CodeDocxGenerator {
     }
 
     /**
-     * 读取文件内容：过滤空行和注释
-     * @param filePath
-     * @return
-     */
-    private static List<String> readFile(String filePath){
-        if(null == filePath || new File(filePath).isDirectory()){
-            return new ArrayList<>();
-        }
-        List<String> lines = new ArrayList<>();
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(new File(filePath)));
-            String line = reader.readLine();
-            while(null != line){
-                if(filterLine(line)){// 过滤不符合要求的代码行
-                    lines.add(line);
-                }
-                line = reader.readLine();
-            }
-            return lines;
-        } catch (FileNotFoundException e) {
-            error("读取文件<" + filePath + ">出错：" + e.getMessage());
-        } catch (IOException e) {
-            error("读取文件<" + filePath + ">出错：" + e.getMessage());
-        }
-        return new ArrayList<>();
-    }
-
-    /**
-     * 过滤不符合要求的代码行
-     * @param line
-     * @return
-     */
-    public static boolean filterLine(String line){
-        // 过滤空行
-        if(null == line || line.length() == 0){
-            return false;
-        }
-        // 过滤注释
-        if(line.trim().startsWith("/") || line.trim().startsWith("*")){
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * 获取文件名
-     * @param filePath 文件路径
-     * @return
-     */
-    public static String getFileName(String filePath){
-        if(null == filePath || new File(filePath).isDirectory()){
-            return "";
-        }
-        File file = new File(filePath);
-        return file.getName();
-    }
-
-    /**
      * Word保存到本地
      * @param doc
      */
-    public static void saveDocx(XWPFDocument doc, String savePath){
+    public void saveDocx(XWPFDocument doc, String savePath){
         // 创建文件输出流：保存Word到本地
         try {
             FileOutputStream fout = new FileOutputStream(savePath);
             doc.write(fout);
             fout.close();
         } catch (FileNotFoundException e) {
-            error("保存Word文档到本地时发生错误：" + e.getMessage());
+            LogUtils.error("保存Word文档到本地时发生错误：" + e.getMessage());
         } catch (IOException e) {
-            error("保存Word文档到本地时发生错误：" + e.getMessage());
+            LogUtils.error("保存Word文档到本地时发生错误：" + e.getMessage());
         }
     }
-
-    /**
-     * 退出
-     */
-    private static void exit(){
-        System.exit(0);
-    }
-
-    // 打印信息
-    public static void print(String msg){
-        System.out.println(msg);
-    }
-
-    // 打印错误信息
-    public static void error(String msg){
-        System.err.println(msg);
-    }
-
 
 }
