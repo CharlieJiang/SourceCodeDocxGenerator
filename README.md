@@ -6,21 +6,22 @@
 ![源代码Word文档截图示例](screenshot/docx.png)
  
 ## 注意
-1. 此工具目前只支持生成一种文件类型的源代码文档，如.java，如果要过滤多种文件类型，可以考虑修改此项目源码。
+1. <u>此工具目前只支持生成一种文件类型的源代码文档，如.java，如果要过滤多种文件类型，可以考虑修改此项目源码。</u>目前已支持生成多种文件类型的源代码文档，具体使用方法见下方。
 2. 此项目是为了Android软件申请软著开发，所以在目录过滤时未考虑Java项目以及其他语言项目，可能会存在将项目自动生成的代码写进文档中的情况，后续会进行改进。
 3. 为了保证源代码的完整性，最后一个准备写入Word的源代码文件的内容会被全部写入Word中，由此也会导致最终生成的源代码Word文档的页数可能会超过60页，这时就需要手动调整文档页数。
 
 ## 使用SourceCodeDocxGenerator.jar
  本项目已打包成可运行的jar文件，即项目中的SourceCodeDocxGenerator.jar，可以直接在命令行中使用，使用命令格式如下：
  ```
- java -Dfile.encoding=utf-8 -jar jar文件路径 项目路径 软件名称 版本号 源代码文件类型
+ java -Dfile.encoding=utf-8 -jar jar文件路径 项目路径 软件名称 版本号 是否分为前后各30页 源代码文件类型
  ```
  其中`-Dfile.encoding=utf-8`指定了JVM的字符集为UTF-8，以保证生成的Word文档中的中文不会出现乱码。  
  `jar文件路径`是SourceCodeDocxGenerator.jar下载到本地的路径  
  `项目路径`是源代码项目的本地路径  
  `软件名称`和`版本号`是用于生成Word文档的页眉的  
- `源代码文件类型`是指要从项目中提取的源代码的文件类型，如.java等  
+ `是否分为前后各30页`是区分要前后各30页写入源码（true）还是顺序写入60页源码（false）   
+ `源代码文件类型`是指要从项目中提取的源代码的文件类型，如.java等，目前已支持多种文件类型，以空格区分。如“.java .kt”。    
  使用SourceCodeDocxGenerator.jar的命令举例：  
  ```
- java -Dfile.encoding=utf-8 -jar D:\Github\SourceCodeDocxGenerator.jar D:\git_workspace\MerchantClient\app XX商户端 V1.0.7 .java
+ java -Dfile.encoding=utf-8 -jar D:\Github\SourceCodeDocxGenerator.jar D:\git_workspace\MerchantClient\app XX商户端 V1.0.7 true .java .kt
  ```
