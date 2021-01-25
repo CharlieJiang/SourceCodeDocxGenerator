@@ -94,36 +94,43 @@ public class FileUtils {
     /**
      * 扫描项目中符合要求文件，并将文件路径存放到列表中
      * @param dir
+     * @param fileTypes
+     * @param ignoreDirs
      * @return
      */
-    public static List<String> scanFiles(String dir, List<String> fileTypes){
+    public static List<String> scanFiles(String dir, List<String> fileTypes, List<String> ignoreDirs){
         File rootFile = new File(dir);
         if(!rootFile.isDirectory()){
             LogUtils.println("项目路径错误：" + dir);
-            exit();
+            return new ArrayList<>();
         }
-        return collectFilesFromDir(dir,fileTypes);
+        return collectFilesFromDir(dir,fileTypes,ignoreDirs);
     }
 
     /**
      * 将文件目录中符合要求的文件的文件路径添加到List中
      * @param dir
+     * @param fileTypes
+     * @param ignoreDirs
      * @return
      */
-    private static List<String> collectFilesFromDir(String dir, List<String> fileTypes){
+    private static List<String> collectFilesFromDir(String dir, List<String> fileTypes, List<String> ignoreDirs){
         File dirFile = new File(dir);
         if(!dirFile.isDirectory()){
             return new ArrayList<>();
         }
-        List<String> files = new ArrayList<>();
+        List<String> files = new ArrayList<>();// 扫描到的文件路径
         File[] subFiles = dirFile.listFiles();
+        if(subFiles == null || subFiles.length <= 0){
+            return files;
+        }
         Arrays.stream(subFiles)
                 .forEach(
                         f -> {
                             // 特殊目录过滤
-                            if(f.isDirectory() && !f.getName().equals("build") && !f.getName().equals("zxing")){
+                            if(f.isDirectory() && !f.getName().equals("build") && !f.getName().equals("zxing") && !isIgnoreDir(f,ignoreDirs)){
                                 // 继续迭代目录
-                                files.addAll(collectFilesFromDir(f.getAbsolutePath(),fileTypes));
+                                files.addAll(collectFilesFromDir(f.getAbsolutePath(),fileTypes,ignoreDirs));
                             }else if(FileUtils.matchFile(f,fileTypes)){
                                 // 添加文件路径
                                 files.add(f.getAbsolutePath());
@@ -131,6 +138,24 @@ public class FileUtils {
                         }
                 );
         return files;
+    }
+
+    /**
+     * 判断文件目录是否是需要过滤的目录
+     * @param f
+     * @param ignoreDirs
+     * @return
+     */
+    private static boolean isIgnoreDir(File f, List<String> ignoreDirs){
+        if(ignoreDirs == null || ignoreDirs.isEmpty()){
+            return false;
+        }
+        for(String ignoreDir: ignoreDirs){
+            if(f.getName().equals(ignoreDir)){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

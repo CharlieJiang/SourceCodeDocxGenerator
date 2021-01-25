@@ -5,6 +5,7 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.apache.xmlbeans.impl.xb.xmlschema.SpaceAttribute;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
+import javax.swing.*;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.math.BigInteger;
@@ -26,17 +27,21 @@ public class CodeDocxGenerator {
     private final long PAGE_MARGIN_VERTICAL = 1080L;// 页面上下边距
     private final long PAGE_MARGIN_HORIZONTAL = 720L;// 页面左右边距
     private boolean IS_HALF = false;// 文档是否分为前后各30页
+    private final int PAGE_LINES = 53;// 文档每页行数
+    private List<String> IGNORE_DIRS;// 需要扫描时忽略的文件夹
 
-    public static void main(String[] args) {
-        CodeDocxGenerator cdg = new CodeDocxGenerator();
-        cdg.start(args);
-    }
+//    public static void main(String[] args) {
+//        CodeDocxGenerator cdg = new CodeDocxGenerator();
+//        cdg.start(args,null);
+//    }
+
+    public CodeDocxGenerator(){}
 
     /**
      * 开始
      * @param args
      */
-    public void start(String[] args){
+    public void start(String[] args, List<String> ignoreDirs){
         LogUtils.println("开始");
         // 四个参数处理：项目源代码目录、软件名称、版本号、源码文件类型
         if(args == null || args.length < 5){
@@ -49,8 +54,11 @@ public class CodeDocxGenerator {
         FILE_TYPES = new ArrayList<>();
         // 遍历获取选择的源码文件类型
         for(int i = 4;i < args.length;i++){
-            FILE_TYPES.add(args[i]);
+            if(args[i] != null && !args[i].isEmpty()){
+                FILE_TYPES.add(args[i]);
+            }
         }
+        IGNORE_DIRS = ignoreDirs == null ? new ArrayList<>() : ignoreDirs;
         DOC_SAVE_PATH = PROJECT_PATH + "\\SourceCode.docx";
         LogUtils.println("获取参数成功");
         LogUtils.println("源代码项目目录：" + PROJECT_PATH);
@@ -60,6 +68,9 @@ public class CodeDocxGenerator {
         FILE_TYPES.stream().forEach(LogUtils::print);
         LogUtils.println("");
         LogUtils.println("写入方式：" + (IS_HALF?"前后各30页":"顺序60页"));
+        LogUtils.print("扫描忽略目录：" );
+        IGNORE_DIRS.stream().forEach(LogUtils::print);
+        LogUtils.println("");
         generateSourceCodeDocx(PROJECT_PATH);
     }
 
@@ -70,9 +81,13 @@ public class CodeDocxGenerator {
     private void generateSourceCodeDocx(String projectPath){
         //扫描项目中符合要求的文件
         LogUtils.println("开始扫描文件");
-        List<String> files = FileUtils.scanFiles(projectPath, FILE_TYPES);
+        List<String> files = FileUtils.scanFiles(projectPath, FILE_TYPES,IGNORE_DIRS);
         LogUtils.println("扫描文件完成");
         LogUtils.println("文件总数：" + files.size());
+        if(files.size() <= 0){
+            MsgHintUtil.showHint("未扫描到符合要求的文件");
+            return ;
+        }
         // 创建一个Word：存放源代码
         XWPFDocument doc = new XWPFDocument();
         // 设置Word的页边距：保证每页不少于50行代码，且尽量保证每行代码不换行
@@ -164,9 +179,15 @@ public class CodeDocxGenerator {
             CTSettings ctSettings = (CTSettings) filedCtSet.get(xwpfsettings);
             ctSettings.addNewEvenAndOddHeaders();
 
+            // 获取文档页数
+//            int pageNums = doc.getProperties().getExtendedProperties()
+//                    .getUnderlyingProperties().getPages();// 计算结果有问题
+            int pageNums = totalLines/PAGE_LINES + 1;// 根据统计的代码行数计算总页数
+            LogUtils.println("pageNums=" + pageNums);
             // 保存文档
             doc.write(new FileOutputStream(DOC_SAVE_PATH));
             doc.close();
+            MsgHintUtil.showFinishHint(DOC_SAVE_PATH,pageNums,totalLines);
         }catch (Exception e){
             LogUtils.error("Word添加页眉出错：" + e.getMessage());
         }
