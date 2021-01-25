@@ -5,8 +5,7 @@
  ## 更新
  SourceCodeDocxGenerator目前已支持图形界面操作，可下载根目录下的[SourceCodeDocxGenerator.exe](https://github.com/CharlieJiang/SourceCodeDocxGenerator/blob/main/SourceCodeDocxGenerator.exe)文件直接运行。  
  * **图形界面使用截图**   
- ![图形界面未输入](screentshot/gui_unInput.png)  
- ![图形界面已输入](screentshot/gui_input.png)  
+ ![图形界面未输入](screenshot/gui_unInput.png)![图形界面已输入](screenshot/gui_input.png)  
  * **参数说明**   
  **忽略目录**参数用于填写扫描时需要忽略的源代码目录，只需要输入目录名而无需输入目录的相对或绝对路径，多个目录间以空格分割，如"build debug release"。  
  其它参数请参考下方说明。
