@@ -23,11 +23,11 @@ public class CodeDocxGenerator {
     private String HEADER = "";// 软件名称+版本号
     private List<String> FILE_TYPES;// 需要查找的文件类型
     private int totalLines = 0;// 代码总行数
-    private final int MAX_LINES = 52 * 60; // 限制代码的最大行数
+    private final int PAGE_LINES = 53;// 文档每页行数
+    private final int MAX_LINES = PAGE_LINES * 60; // 限制代码的最大行数
     private final long PAGE_MARGIN_VERTICAL = 1080L;// 页面上下边距
     private final long PAGE_MARGIN_HORIZONTAL = 720L;// 页面左右边距
     private boolean IS_HALF = false;// 文档是否分为前后各30页
-    private final int PAGE_LINES = 53;// 文档每页行数
     private List<String> IGNORE_DIRS;// 需要扫描时忽略的文件夹
 
 //    public static void main(String[] args) {
@@ -183,7 +183,6 @@ public class CodeDocxGenerator {
 //            int pageNums = doc.getProperties().getExtendedProperties()
 //                    .getUnderlyingProperties().getPages();// 计算结果有问题
             int pageNums = totalLines/PAGE_LINES + 1;// 根据统计的代码行数计算总页数
-            LogUtils.println("pageNums=" + pageNums);
             // 保存文档
             doc.write(new FileOutputStream(DOC_SAVE_PATH));
             doc.close();

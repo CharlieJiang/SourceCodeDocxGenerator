@@ -81,13 +81,24 @@ public class FileUtils {
      */
     public static boolean filterLine(String line){
         // 过滤空行
-        if(null == line || line.length() == 0){
+        if(null == line || line.trim().length() == 0){
             return false;
         }
-        // 过滤注释
-        if(line.trim().startsWith("/") || line.trim().startsWith("*")){
+        String lineTrim = line.trim();
+        // 过滤一般的行注释//、块注释/* */、文档注释/** */
+        if(lineTrim.startsWith("//") || lineTrim.startsWith("/*")
+                || lineTrim.startsWith("*")){
             return false;
         }
+        // 过滤html、xml注释：<!-- -->
+        if(lineTrim.startsWith("<!--")){
+            return false;
+        }
+        // 过滤PHP、Python的行注释：#
+        if(lineTrim.startsWith("#")){
+            return false;
+        }
+        // Python的块注释用法比较复杂，不太适合自动过滤
         return true;
     }
 
